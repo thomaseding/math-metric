@@ -1,11 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.Metric (
-      Metric(..)
-    , closest
-    ) where
+    Metric(..),
+    closest,
+) where
 
 
+import Data.Proxy
 import Data.Ratio
 import Data.Word
 
@@ -14,21 +16,21 @@ class Metric a where
     dist :: (Fractional n) => a -> a -> n
 
 
-closest :: (Metric a) => [a] -> a -> a
-closest xs target = case xs of
+closest :: (Fractional n, Ord n, Metric a) => Proxy n -> [a] -> a -> a
+closest p xs target = case xs of
     [] -> error "closest: empty list"
-    best : xs' -> closest' target xs' best
+    best : xs' -> closest' p target xs' best
 
 
-closest' :: (Metric a) => a -> [a] -> a -> a
-closest' target xs best = case xs of
+closest' :: forall n a. (Fractional n, Ord n, Metric a) => Proxy n -> a -> [a] -> a -> a
+closest' p target xs best = case xs of
     [] -> best
-    x : xs' -> closest' target xs' $ if dist target x < dist target best
-        then x
-        else best
-
-
-
+    x : xs' -> let
+        dx = dist target x :: n
+        db = dist target best :: n
+        in closest' p target xs' $ case dx < db of
+            True -> x
+            False -> best
 
 
 instance Metric Int where
